@@ -1,0 +1,4 @@
+name: Domination_test
+version: '1.0-SNAPSHOT'
+main: io.github.LRGyutoi.hello.Hello
+api-version: '1.21'
