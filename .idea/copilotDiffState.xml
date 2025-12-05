@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/src/main/resources/plugin.yml">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/src/main/resources/plugin.yml" />
+              <option name="originalContent" value="name: Domination_test&#10;version: '1.0-SNAPSHOT'&#10;main: io.github.LRGyutoi.hello.Hello&#10;api-version: '1.21.10-R0.1-SNAPSHOT'&#10;" />
+              <option name="updatedContent" value="name: Domination_test&#10;version: '1.0-SNAPSHOT'&#10;main: io.github.LRGyutoi.hello.Hello&#10;api-version: '1.21'&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

@@ -1,4 +1,5 @@
 package io.github.LRGyutoi.hello;
+
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
