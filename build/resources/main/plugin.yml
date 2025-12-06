@@ -1,4 +1,16 @@
 name: Domination_test
 version: '1.0-SNAPSHOT'
-main: io.github.LRGyutoi.hello.Hello
+main: io.github.LRGyutoi.domination_test.Domination_test
 api-version: '1.21'
+commands:
+  gun:
+    description: 銃の管理コマンド
+    usage: /gun <give|list|reload> [player] [gun_type]
+    permission: domination.gun.admin
+permissions:
+  domination.gun.admin:
+    description: 銃の管理権限
+    default: op
+  domination.gun.use:
+    description: 銃の使用権限
+    default: true
