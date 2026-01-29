@@ -1,26 +1,38 @@
-name: Domination_test
-version: '1.0-SNAPSHOT'
-main: io.github.LRGyutoi.domination_test.Domination_test
+name: Domination
+version: '2.0.0'
+main: io.github.LRGyutoi.domination.DominationPlugin
 api-version: '1.21'
+description: 拠点制圧型TPSゲームプラグイン（クリーンアーキテクチャ版）
+author: LRGyutoi
+website: https://github.com/LRGyutoi
+
 commands:
-  gun:
-    description: 銃の管理コマンド
-    usage: /gun <give|list|reload> [player] [gun_type]
-    permission: domination.gun.admin
+  team:
+    description: チーム管理コマンド
+    usage: /team <join|leave|list> [チーム名]
+    permission: domination.team
+
+  weapon:
+    description: 武器管理コマンド
+    usage: /weapon <give|list|reload> [武器ID]
+    permission: domination.weapon
+
   domination:
-    description: 陣地取りゲームの管理コマンド
-    usage: /domination <join|start|stop|setpoint|tickets|listpoints>
-    aliases: [dom]
+    description: ゲーム管理コマンド
+    usage: /domination <start|stop|status|addpoint|removepoint|reset>
+    permission: domination.admin
+    aliases: [dom, game]
+
 permissions:
-  domination.gun.admin:
-    description: 銃の管理権限
-    default: op
-  domination.gun.use:
-    description: 銃の使用権限
+  domination.team:
+    description: チームコマンドを使用できる
     default: true
+
+  domination.weapon:
+    description: 武器コマンドを使用できる
+    default: true
+
   domination.admin:
-    description: 陣地取りゲームの管理権限
+    description: ゲーム管理コマンドを使用できる
     default: op
-  domination.play:
-    description: 陣地取りゲームへの参加権限
-    default: true
+

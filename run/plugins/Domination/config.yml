@@ -1,0 +1,55 @@
+# Domination TPS - 設定ファイル
+# 拠点制圧型TPSゲームプラグイン
+
+# === ダメージ設定 ===
+damage:
+  # ヘッドショット時のダメージ倍率
+  headshot-multiplier: 2.0
+  
+  # 距離減衰設定
+  distance-falloff:
+    enabled: false
+    start-distance: 30.0  # 減衰開始距離（ブロック）
+    end-distance: 100.0   # 最大減衰距離（ブロック）
+    min-damage-percent: 0.5  # 最大減衰時のダメージ割合（0.5 = 50%）
+
+# === 戦闘設定 ===
+combat:
+  # フレンドリーファイア（味方へのダメージ）
+  friendly-fire: false
+
+# === 不正対策設定 ===
+anti-cheat:
+  # 同一プレイヤーへのダメージクールダウン（ミリ秒）
+  damage-cooldown-ms: 50
+
+# === リスポーン設定 ===
+respawn:
+  # リスポーン待機時間（tick、20tick = 1秒）
+  delay-ticks: 100
+  # リスポーン時に弾薬を満タンにするか
+  full-ammo: true
+  # リスポーン時にHPを満タンにするか
+  full-health: true
+
+# === 弾丸設定 ===
+bullet:
+  # 弾道パーティクル
+  trail:
+    enabled: true
+    particle-count: 3
+  # 弾丸の最大射程（ブロック）
+  max-range: 200.0
+  # 弾丸の寿命（tick）
+  lifetime-ticks: 100
+
+# === ゲーム設定 ===
+game:
+  # 初期チケット数
+  initial-tickets: 200
+  # チケット減少間隔（tick、20 = 1秒ごと）
+  ticket-drain-interval: 20
+
+# === デバッグ設定 ===
+debug:
+  enabled: false
