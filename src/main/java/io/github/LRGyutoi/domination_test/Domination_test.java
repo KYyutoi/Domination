@@ -10,6 +10,7 @@ public final class Domination_test extends JavaPlugin implements Listener {
 
     private GunManager gunManager;
     private GunHandler gunHandler;
+    private DominationManager dominationManager;
 
     @Override
     public void onEnable() {
@@ -20,6 +21,9 @@ public final class Domination_test extends JavaPlugin implements Listener {
         gunManager = new GunManager(this);
         gunHandler = new GunHandler(this, gunManager);
 
+        // 陣地取りシステムの初期化
+        dominationManager = new DominationManager(this);
+
         // イベントリスナーの登録
         getServer().getPluginManager().registerEvents(gunHandler, this);
         getServer().getPluginManager().registerEvents(this, this);
@@ -29,7 +33,12 @@ public final class Domination_test extends JavaPlugin implements Listener {
         getCommand("gun").setExecutor(gunCommand);
         getCommand("gun").setTabCompleter(gunCommand);
 
+        DominationCommand dominationCommand = new DominationCommand(this, dominationManager);
+        getCommand("domination").setExecutor(dominationCommand);
+        getCommand("domination").setTabCompleter(dominationCommand);
+
         getLogger().info("銃システムを正常に読み込みました！");
+        getLogger().info("陣地取りシステムを正常に読み込みました！");
     }
 
     @EventHandler
@@ -40,6 +49,10 @@ public final class Domination_test extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+        if (dominationManager != null && dominationManager.isGameActive()) {
+            dominationManager.stopGame();
+        }
+        TeamManager.getInstance().reset();
         getLogger().info("Domination_test プラグインを無効化しました");
     }
 
@@ -49,5 +62,9 @@ public final class Domination_test extends JavaPlugin implements Listener {
 
     public GunHandler getGunHandler() {
         return gunHandler;
+    }
+
+    public DominationManager getDominationManager() {
+        return dominationManager;
     }
 }

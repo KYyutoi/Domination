@@ -1,11 +1,8 @@
 package io.github.LRGyutoi.domination_test;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.ProjectileHitEvent;
@@ -13,6 +10,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -59,7 +57,7 @@ public class GunHandler implements Listener {
                 if (gun != null) {
                     // 初回装備時に弾薬を初期化（満タン）
                     if (!data.hasAmmoEntry(gunId)) {
-                        data.ensureAmmoInitialized(gunId, gun.getMagazineSize());
+                        data.setAmmo(gunId, gun.getMagazineSize());
                     }
                     updateAmmoDisplay(player, item, gun, data);
                 }
@@ -70,81 +68,77 @@ public class GunHandler implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         // メインハンド以外（オフハンド）のインタラクトは無視
         if (event.getHand() != EquipmentSlot.HAND) return;
 
-        // 受信デバッグ（キャンセルフラグのログは削除）
-        plugin.getLogger().info("onPlayerInteract received: action=" + event.getAction());
-
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        // MainHand は常に非nullのため型のみチェック
-        if (item.getType() != Material.CROSSBOW) {
-            plugin.getLogger().info("Main hand is not CROSSBOW: " + item.getType());
-            return;
-        }
+        if (item == null || item.getType() != Material.CROSSBOW) return;
 
         String gunId = getGunId(item);
-        if (gunId == null) {
-            plugin.getLogger().info("CROSSBOW without gun_id tag");
-            return;
-        }
-
-        GunStats gun = gunManager.getGun(gunId);
-        if (gun == null) {
-            player.sendMessage("§c銃の設定が見つかりません: " + gunId);
-            return;
-        }
-
-        PlayerGunData data = getPlayerData(player.getUniqueId());
-        Action action = event.getAction();
+        if (gunId == null) return;
 
         // カスタム銃の場合、バニラの動作をキャンセル
         event.setCancelled(true);
 
-        // デバッグ情報
-        plugin.getLogger().info("PlayerInteract - Action: " + action + ", Gun: " + gunId);
+        GunStats gun = gunManager.getGun(gunId);
+        if (gun == null) {
+            plugin.getLogger().warning("銃が見つかりません: " + gunId);
+            return;
+        }
+
+        PlayerGunData data = getPlayerData(player.getUniqueId());
+
+        Action action = event.getAction();
+
+        plugin.getLogger().info("PlayerInteract - GunID: " + gunId + ", Action: " + action);
 
         // 右クリックで発射
         if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
-            plugin.getLogger().info("Right click detected, attempting to fire");
-
-            // まず1発目を発射
-            boolean fired = fireGun(player, gun, data, item);
-
-            // フルオートの場合は連続発射を開始
-            if (gun.isAutoFire() && fired) {
+            plugin.getLogger().info("Right click detected for gun: " + gunId + ", AutoFire: " + gun.isAutoFire());
+            if (gun.isAutoFire()) {
                 if (!autoFirePlayers.contains(player.getUniqueId())) {
                     autoFirePlayers.add(player.getUniqueId());
-                    startAutoFire(player, gun, data, item);
+                    // まず1発目を即座に発射
+                    boolean fired = fireGun(player, gun, data, item);
+                    if (fired) {
+                        // 発射成功したら自動連射を開始
+                        startAutoFire(player, gun, data, item);
+                    } else {
+                        // 発射失敗（弾切れなど）の場合は自動連射リストから削除
+                        autoFirePlayers.remove(player.getUniqueId());
+                    }
                 }
+            } else {
+                fireGun(player, gun, data, item);
             }
-        } else {
-            // 非対応操作のログ
-            plugin.getLogger().info("Non-fire action: " + action);
         }
     }
 
-    // Rキー（持ち替えキー）でリロード
+    // Rキー（持ち替えキー/Fキー）でリロード
     @EventHandler
     public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        // MainHand は常に非nullのため型のみチェック
-        if (item.getType() != Material.CROSSBOW) return;
+        if (item == null || item.getType() != Material.CROSSBOW) return;
 
         String gunId = getGunId(item);
         if (gunId == null) return;
 
-        // オフハンドスワップをキャンセル（Rキーをリロードとして使用する）
+        // オフハンドスワップをキャンセル（Rキー/Fキーをリロードとして使用する）
         event.setCancelled(true);
 
+        plugin.getLogger().info("PlayerSwapHandItems - Reload requested for gun: " + gunId);
+
         GunStats gun = gunManager.getGun(gunId);
-        if (gun == null) return;
+        if (gun == null) {
+            plugin.getLogger().warning("銃が見つかりません: " + gunId);
+            return;
+        }
 
         PlayerGunData data = getPlayerData(player.getUniqueId());
         reload(player, gun, data, item);
@@ -167,20 +161,23 @@ public class GunHandler implements Listener {
                     this.cancel();
                 }
             }
-        }.runTaskTimer(plugin, 0, gun.getFireRate());
+        }.runTaskTimer(plugin, gun.getFireRate(), gun.getFireRate()); // 初回もfire-rate後に実行
     }
 
     private boolean fireGun(Player player, GunStats gun, PlayerGunData data, ItemStack item) {
-        plugin.getLogger().info("fireGun called for player: " + player.getName());
+        plugin.getLogger().info("fireGun called for gun: " + gun.getId() + ", player: " + player.getName());
 
         if (data.isReloading()) {
-            player.sendMessage("§cリロード中です");
+            plugin.getLogger().info("Player is reloading, cannot fire");
             return false;
         }
 
         long currentTime = System.currentTimeMillis();
         long timeSinceLastShot = currentTime - data.getLastShotTime();
-        long requiredDelay = gun.getFireRate() * 50L;
+        // オートファイアの場合は、より緩いチェック（fire-rate - 10ms）
+        long requiredDelay = gun.isAutoFire()
+            ? Math.max(0, gun.getFireRate() * 50L - 10)
+            : gun.getFireRate() * 50L;
 
         if (timeSinceLastShot < requiredDelay) {
             plugin.getLogger().info("Fire rate limit: " + timeSinceLastShot + "ms < " + requiredDelay + "ms");
@@ -188,11 +185,11 @@ public class GunHandler implements Listener {
         }
 
         int ammo = data.getAmmo(gun.getId());
-        plugin.getLogger().info("Current ammo: " + ammo);
+        plugin.getLogger().info("Current ammo for " + gun.getId() + ": " + ammo);
 
         if (ammo <= 0) {
             player.playSound(player.getLocation(), Sound.BLOCK_DISPENSER_FAIL, 1.0f, 1.0f);
-            player.sendMessage("§c弾切れ！ §eRキーでリロード (持ち替えキー)");
+            player.sendMessage("§c弾切れ！ §eRキー（F）でリロード");
             return false;
         }
 
@@ -202,70 +199,50 @@ public class GunHandler implements Listener {
         player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 1.5f);
 
         int pellets = gun.getPellets();
-        plugin.getLogger().info("Firing " + pellets + " pellets");
+        plugin.getLogger().info("Firing " + pellets + " pellet(s)");
 
         for (int i = 0; i < pellets; i++) {
             shootProjectile(player, gun);
         }
 
         updateAmmoDisplay(player, item, gun, data);
-        player.sendMessage("§7[§e" + data.getAmmo(gun.getId()) + "§7/§e" + gun.getMagazineSize() + "§7]");
 
         return true;
     }
 
     private void shootProjectile(Player player, GunStats gun) {
         Location eyeLoc = player.getEyeLocation();
-        Vector direction = eyeLoc.getDirection().normalize();
+        // 弾の発射位置を0.2ブロック下げる
+        eyeLoc.add(0, -0.2, 0);
+        Vector direction = eyeLoc.getDirection();
 
-        // スプレッドなし - 一直線に飛ぶ
-
-        plugin.getLogger().info("Spawning arrow at: " + eyeLoc + " with direction: " + direction);
+        if (gun.getSpread() > 0) {
+            Random random = new Random();
+            double spread = gun.getSpread() * 0.1;
+            direction.add(new Vector(
+                (random.nextDouble() - 0.5) * spread,
+                (random.nextDouble() - 0.5) * spread,
+                (random.nextDouble() - 0.5) * spread
+            ));
+            direction.normalize();
+        }
 
         Arrow arrow = player.getWorld().spawnArrow(
             eyeLoc,
             direction,
             (float) gun.getProjectileSpeed(),
-            0.0f // スプレッドを0に固定
+            0.0f
         );
 
         arrow.setShooter(player);
         arrow.setDamage(gun.getDamage());
         arrow.setPierceLevel(0);
         arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
-
-        // 矢を透明化
-        arrow.setVisibleByDefault(false);
-        arrow.setInvulnerable(true);
-
         arrow.getPersistentDataContainer().set(
             new NamespacedKey(plugin, "gun_projectile"),
             PersistentDataType.STRING,
             gun.getId()
         );
-
-        // 火のエフェクトのみを飛ばすための軌跡タスク
-        new BukkitRunnable() {
-            int ticks = 0;
-            final int maxTicks = 100; // 最大5秒間追跡
-
-            @Override
-            public void run() {
-                if (!arrow.isValid() || arrow.isDead() || arrow.isOnGround() || ticks++ > maxTicks) {
-                    this.cancel();
-                    return;
-                }
-
-                Location arrowLoc = arrow.getLocation();
-                // 火のエフェクトを矢の軌跡に沿って表示
-                player.getWorld().spawnParticle(Particle.FLAME, arrowLoc, 3, 0.05, 0.05, 0.05, 0.01);
-                player.getWorld().spawnParticle(Particle.SMOKE, arrowLoc, 1, 0.02, 0.02, 0.02, 0.01);
-            }
-        }.runTaskTimer(plugin, 0L, 1L);
-
-        // 発射時の視覚効果
-        player.getWorld().spawnParticle(Particle.FLAME, eyeLoc, 15, 0.1, 0.1, 0.1, 0.08);
-        player.getWorld().spawnParticle(Particle.SMOKE, eyeLoc, 8, 0.05, 0.05, 0.05, 0.03);
     }
 
     private void reload(Player player, GunStats gun, PlayerGunData data, ItemStack item) {
@@ -282,7 +259,7 @@ public class GunHandler implements Listener {
 
         data.setReloading(true);
         player.playSound(player.getLocation(), Sound.BLOCK_PISTON_EXTEND, 1.0f, 1.0f);
-        player.sendMessage("§eリロード中... (§c" + (gun.getReloadTime() / 20) + "秒§e)");
+        player.sendMessage("§eリロード中...");
 
         new BukkitRunnable() {
             @Override
@@ -291,7 +268,7 @@ public class GunHandler implements Listener {
                     data.setAmmo(gun.getId(), gun.getMagazineSize());
                     data.setReloading(false);
                     player.playSound(player.getLocation(), Sound.BLOCK_PISTON_CONTRACT, 1.0f, 1.5f);
-                    player.sendMessage("§aリロード完了！ §7[§e" + gun.getMagazineSize() + "§7/§e" + gun.getMagazineSize() + "§7]");
+                    player.sendMessage("§aリロード完了！");
                     updateAmmoDisplay(player, item, gun, data);
                 }
             }
@@ -303,30 +280,20 @@ public class GunHandler implements Listener {
         if (meta == null) return;
 
         int ammo = data.getAmmo(gun.getId());
-
-        // 銃の名前をパース（レガシーカラーコードを含む可能性がある）
-        String gunName = gun.getName();
-        Component displayName;
-        if (gunName.contains("§")) {
-            displayName = Component.text(gunName.replaceAll("§.", ""));
-        } else {
-            displayName = Component.text(gunName);
-        }
-
-        meta.displayName(displayName);
+        meta.displayName(net.kyori.adventure.text.Component.text(gun.getName()));
         meta.lore(Arrays.asList(
-            Component.text("弾薬: ", NamedTextColor.GRAY)
-                .append(Component.text(ammo + " / " + gun.getMagazineSize(), NamedTextColor.WHITE)),
-            Component.text("ダメージ: ", NamedTextColor.GRAY)
-                .append(Component.text(gun.getDamage(), NamedTextColor.WHITE)),
-            Component.text("連射速度: ", NamedTextColor.GRAY)
-                .append(Component.text(gun.getFireRate() + " ticks", NamedTextColor.WHITE)),
-            Component.text(gun.isAutoFire() ? "フルオート" : "セミオート", NamedTextColor.GRAY),
-            Component.empty(),
-            Component.text("右クリック: ", NamedTextColor.YELLOW)
-                .append(Component.text("発射", NamedTextColor.WHITE)),
-            Component.text("Rキー: ", NamedTextColor.YELLOW)
-                .append(Component.text("リロード (持ち替えキー)", NamedTextColor.WHITE))
+            net.kyori.adventure.text.Component.text("弾薬: ", net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                .append(net.kyori.adventure.text.Component.text(ammo + " / " + gun.getMagazineSize(), net.kyori.adventure.text.format.NamedTextColor.WHITE)),
+            net.kyori.adventure.text.Component.text("ダメージ: ", net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                .append(net.kyori.adventure.text.Component.text(gun.getDamage(), net.kyori.adventure.text.format.NamedTextColor.WHITE)),
+            net.kyori.adventure.text.Component.text("連射速度: ", net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                .append(net.kyori.adventure.text.Component.text(gun.getFireRate() + " ticks", net.kyori.adventure.text.format.NamedTextColor.WHITE)),
+            net.kyori.adventure.text.Component.text(gun.isAutoFire() ? "フルオート" : "セミオート", net.kyori.adventure.text.format.NamedTextColor.GRAY),
+            net.kyori.adventure.text.Component.empty(),
+            net.kyori.adventure.text.Component.text("右クリック: ", net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+                .append(net.kyori.adventure.text.Component.text("発射", net.kyori.adventure.text.format.NamedTextColor.WHITE)),
+            net.kyori.adventure.text.Component.text("Rキー（F）: ", net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+                .append(net.kyori.adventure.text.Component.text("リロード", net.kyori.adventure.text.format.NamedTextColor.WHITE))
         ));
 
         item.setItemMeta(meta);
@@ -340,31 +307,24 @@ public class GunHandler implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return null;
 
-        // 銃の名前をパース（レガシーカラーコードを含む可能性がある）
-        String gunName = gun.getName();
-        Component displayName;
-        if (gunName.contains("§")) {
-            displayName = Component.text(gunName.replaceAll("§.", ""));
-        } else {
-            displayName = Component.text(gunName);
-        }
-
-        meta.displayName(displayName);
+        meta.displayName(net.kyori.adventure.text.Component.text(gun.getName()));
         meta.getPersistentDataContainer().set(gunIdKey, PersistentDataType.STRING, gunId);
         meta.lore(Arrays.asList(
-            Component.text("弾薬: ", NamedTextColor.GRAY)
-                .append(Component.text(gun.getMagazineSize() + " / " + gun.getMagazineSize(), NamedTextColor.WHITE)),
-            Component.text("ダメージ: ", NamedTextColor.GRAY)
-                .append(Component.text(gun.getDamage(), NamedTextColor.WHITE)),
-            Component.text("連射速度: ", NamedTextColor.GRAY)
-                .append(Component.text(gun.getFireRate() + " ticks", NamedTextColor.WHITE)),
-            Component.text(gun.isAutoFire() ? "フルオート" : "セミオート", NamedTextColor.GRAY),
-            Component.empty(),
-            Component.text("右クリック: ", NamedTextColor.YELLOW)
-                .append(Component.text("発射", NamedTextColor.WHITE)),
-            Component.text("Rキー: ", NamedTextColor.YELLOW)
-                .append(Component.text("リロード (持ち替えキー)", NamedTextColor.WHITE))
+            net.kyori.adventure.text.Component.text("弾薬: ", net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                .append(net.kyori.adventure.text.Component.text(gun.getMagazineSize() + " / " + gun.getMagazineSize(), net.kyori.adventure.text.format.NamedTextColor.WHITE)),
+            net.kyori.adventure.text.Component.text("ダメージ: ", net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                .append(net.kyori.adventure.text.Component.text(gun.getDamage(), net.kyori.adventure.text.format.NamedTextColor.WHITE)),
+            net.kyori.adventure.text.Component.text("連射速度: ", net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                .append(net.kyori.adventure.text.Component.text(gun.getFireRate() + " ticks", net.kyori.adventure.text.format.NamedTextColor.WHITE)),
+            net.kyori.adventure.text.Component.text(gun.isAutoFire() ? "フルオート" : "セミオート", net.kyori.adventure.text.format.NamedTextColor.GRAY),
+            net.kyori.adventure.text.Component.empty(),
+            net.kyori.adventure.text.Component.text("右クリック: ", net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+                .append(net.kyori.adventure.text.Component.text("発射", net.kyori.adventure.text.format.NamedTextColor.WHITE)),
+            net.kyori.adventure.text.Component.text("Rキー（F）: ", net.kyori.adventure.text.format.NamedTextColor.YELLOW)
+                .append(net.kyori.adventure.text.Component.text("リロード", net.kyori.adventure.text.format.NamedTextColor.WHITE))
         ));
+
+        // クロスボウに矢を装填しない（バニラの動作を防ぐ）
 
         item.setItemMeta(meta);
         return item;

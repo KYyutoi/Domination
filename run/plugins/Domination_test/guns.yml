@@ -3,8 +3,8 @@
 # fire-rate: 連射速度（ティック単位、20tick = 1秒）
 # magazine-size: 弾倉サイズ
 # reload-time: リロード時間（ティック単位）
-# projectile-speed: 弾速
-# spread: 拡散度（精度）
+# projectile-speed: 弾速（高いほど速く遠くまで飛ぶ）
+# spread: 拡散度（0=まっすぐ、大きいほど拡散）
 # auto-fire: 自動連射（true/false）
 
 guns:
@@ -14,8 +14,8 @@ guns:
     fire-rate: 8
     magazine-size: 12
     reload-time: 40
-    projectile-speed: 3.0
-    spread: 0.5
+    projectile-speed: 8.0
+    spread: 0.0
     auto-fire: false
   
   assault_rifle:
@@ -24,8 +24,8 @@ guns:
     fire-rate: 3
     magazine-size: 30
     reload-time: 60
-    projectile-speed: 4.0
-    spread: 1.0
+    projectile-speed: 10.0
+    spread: 0.0
     auto-fire: true
   
   sniper_rifle:
@@ -34,7 +34,7 @@ guns:
     fire-rate: 30
     magazine-size: 5
     reload-time: 80
-    projectile-speed: 6.0
+    projectile-speed: 15.0
     spread: 0.0
     auto-fire: false
   
@@ -44,8 +44,8 @@ guns:
     fire-rate: 1
     magazine-size: 25
     reload-time: 50
-    projectile-speed: 3.5
-    spread: 1.5
+    projectile-speed: 8.0
+    spread: 0.0
     auto-fire: true
   
   shotgun:
@@ -62,10 +62,10 @@ guns:
   machine_gun:
     name: §4マシンガン
     damage: 20.0
-    fire-rate: 2
+    fire-rate: 1
     magazine-size: 100
     reload-time: 100
-    projectile-speed: 4.5
-    spread: 2.0
+    projectile-speed: 10.0
+    spread: 0.0
     auto-fire: true
 

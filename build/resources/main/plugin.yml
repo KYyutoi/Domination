@@ -7,10 +7,20 @@ commands:
     description: 銃の管理コマンド
     usage: /gun <give|list|reload> [player] [gun_type]
     permission: domination.gun.admin
+  domination:
+    description: 陣地取りゲームの管理コマンド
+    usage: /domination <join|start|stop|setpoint|tickets|listpoints>
+    aliases: [dom]
 permissions:
   domination.gun.admin:
     description: 銃の管理権限
     default: op
   domination.gun.use:
     description: 銃の使用権限
+    default: true
+  domination.admin:
+    description: 陣地取りゲームの管理権限
+    default: op
+  domination.play:
+    description: 陣地取りゲームへの参加権限
     default: true
