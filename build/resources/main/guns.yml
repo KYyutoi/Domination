@@ -1,0 +1,98 @@
+﻿# 銃の設定ファイル
+# ===========================
+# 基本ステータス:
+#   damage: ダメージ量
+#   fire-rate: 連射速度（ティック単位、20tick = 1秒）
+#   magazine-size: 弾倉サイズ
+#   reload-time: リロード時間（ティック単位）
+#   projectile-speed: 弾速（ブロック/tick）
+#   spread: 拡散度（0=まっすぐ、大きいほど拡散）
+#   auto-fire: 自動連射（true/false）
+#   pellets: 1発あたりの弾丸数（ショットガン用）
+#
+# 拡張ステータス:
+#   headshot-multiplier: 銃固有のHS倍率（グローバル倍率に乗算）
+#   range: 有効射程（ブロック）
+#   move-speed-multiplier: 装備時の移動速度係数
+# ===========================
+
+guns:
+  pistol:
+    name: "§7ピストル"
+    damage: 5.0
+    fire-rate: 8
+    magazine-size: 12
+    reload-time: 40
+    projectile-speed: 8.0
+    spread: 0.0
+    auto-fire: false
+    headshot-multiplier: 1.0
+    range: 50.0
+    move-speed-multiplier: 1.0
+
+  assault_rifle:
+    name: "§cアサルトライフル"
+    damage: 6.0
+    fire-rate: 3
+    magazine-size: 30
+    reload-time: 60
+    projectile-speed: 10.0
+    spread: 0.0
+    auto-fire: true
+    headshot-multiplier: 1.0
+    range: 80.0
+    move-speed-multiplier: 0.95
+
+  sniper_rifle:
+    name: "§9スナイパーライフル"
+    damage: 20.0
+    fire-rate: 30
+    magazine-size: 5
+    reload-time: 80
+    projectile-speed: 15.0
+    spread: 0.0
+    auto-fire: false
+    headshot-multiplier: 1.5
+    range: 150.0
+    move-speed-multiplier: 0.85
+
+  smg:
+    name: "§eサブマシンガン"
+    damage: 4.0
+    fire-rate: 2
+    magazine-size: 25
+    reload-time: 50
+    projectile-speed: 8.0
+    spread: 0.0
+    auto-fire: true
+    headshot-multiplier: 1.0
+    range: 40.0
+    move-speed-multiplier: 1.0
+
+  shotgun:
+    name: "§6ショットガン"
+    damage: 3.0
+    fire-rate: 20
+    magazine-size: 8
+    reload-time: 70
+    projectile-speed: 2.5
+    spread: 3.0
+    auto-fire: false
+    pellets: 8
+    headshot-multiplier: 1.2
+    range: 20.0
+    move-speed-multiplier: 0.9
+
+  machine_gun:
+    name: "§4マシンガン"
+    damage: 7.0
+    fire-rate: 2
+    magazine-size: 100
+    reload-time: 100
+    projectile-speed: 10.0
+    spread: 0.0
+    auto-fire: true
+    headshot-multiplier: 1.0
+    range: 70.0
+    move-speed-multiplier: 0.8
+

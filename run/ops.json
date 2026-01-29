@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "uuid": "2bb998b0-90d5-4798-8243-d3e1080739ca",
+    "name": "YutoI325",
+    "level": 4,
+    "bypassesPlayerLimit": false
+  },
+  {
+    "uuid": "c4c50baf-412d-478d-806e-864e575c2c0e",
+    "name": "kanityuma",
+    "level": 4,
+    "bypassesPlayerLimit": false
+  }
+]
