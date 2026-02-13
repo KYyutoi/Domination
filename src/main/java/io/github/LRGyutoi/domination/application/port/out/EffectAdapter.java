@@ -9,8 +9,10 @@ public interface EffectAdapter {
 
     /**
      * ヒットエフェクトを再生
+     *
+     * @param worldName エフェクトを再生するワールド名
      */
-    void playHitEffect(double x, double y, double z, boolean isHeadshot);
+    void playHitEffect(String worldName, double x, double y, double z, boolean isHeadshot);
 
     /**
      * 発砲エフェクトを再生

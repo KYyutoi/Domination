@@ -39,7 +39,6 @@ public class CapturePoint {
     // === クエリ ===
 
     public String getId() { return id; }
-    public String getName() { return displayName; }
     public String getDisplayName() { return displayName; }
     public double getCaptureRadius() { return captureRadius; }
     public CaptureState getState() { return state; }

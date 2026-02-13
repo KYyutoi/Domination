@@ -4,7 +4,6 @@ import io.github.LRGyutoi.domination.application.port.out.ProjectileAdapter;
 import io.github.LRGyutoi.domination.application.usecase.ProcessHitUseCase;
 import io.github.LRGyutoi.domination.domain.model.player.PlayerId;
 import io.github.LRGyutoi.domination.domain.model.weapon.WeaponId;
-import io.github.LRGyutoi.domination.infrastructure.adapter.BukkitProjectileAdapter;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -15,15 +14,16 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 
 /**
  * 弾丸ヒットイベントリスナー
+ * Presentation層はインターフェース（ProjectileAdapter）にのみ依存する
  */
 public class ProjectileHitListener implements Listener {
 
     private final ProcessHitUseCase processHitUseCase;
-    private final BukkitProjectileAdapter projectileAdapter;
+    private final ProjectileAdapter projectileAdapter;
 
     public ProjectileHitListener(
             ProcessHitUseCase processHitUseCase,
-            BukkitProjectileAdapter projectileAdapter
+            ProjectileAdapter projectileAdapter
     ) {
         this.processHitUseCase = processHitUseCase;
         this.projectileAdapter = projectileAdapter;

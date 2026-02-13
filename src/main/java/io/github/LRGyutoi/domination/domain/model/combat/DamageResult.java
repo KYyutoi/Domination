@@ -18,13 +18,6 @@ public record DamageResult(
     }
 
     /**
-     * 致命的なダメージかどうか
-     */
-    public boolean causedDeath() {
-        return isFatal;
-    }
-
-    /**
      * 致死ダメージかどうか
      */
     public boolean isLethal() {

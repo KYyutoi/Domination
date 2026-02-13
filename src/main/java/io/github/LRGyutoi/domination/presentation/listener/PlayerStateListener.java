@@ -67,17 +67,15 @@ public class PlayerStateListener implements Listener {
         Player player = event.getEntity();
         PlayerId playerId = PlayerId.of(player.getUniqueId().toString());
 
-        // ゲーム中のプレイヤーのみ処理
         playerRepository.findById(playerId).ifPresent(gamePlayer -> {
             if (gamePlayer.isInGame()) {
-                // デスメッセージをカスタマイズ
                 event.deathMessage(null);
 
-                // リスポーン処理を開始
-                respawnPlayerUseCase.startRespawn(playerId);
-
-                // 5秒後に自動リスポーン
-                scheduleRespawn(playerId, 100); // 100 ticks = 5秒
+                // リスポーン開始（遅延秒数を取得）
+                int delaySec = respawnPlayerUseCase.startRespawn(playerId);
+                if (delaySec > 0) {
+                    scheduleRespawnWithCountdown(playerId, delaySec);
+                }
             }
         });
     }
@@ -89,7 +87,6 @@ public class PlayerStateListener implements Listener {
 
         playerRepository.findById(playerId).ifPresent(gamePlayer -> {
             if (gamePlayer.isInGame()) {
-                // リスポーン完了処理を1tick後に実行
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -101,14 +98,23 @@ public class PlayerStateListener implements Listener {
     }
 
     /**
-     * 自動リスポーンをスケジュール
+     * カウントダウン付きリスポーンをスケジュール
+     * 毎秒カウントダウンを表示し、完了後にリスポーンを実行
      */
-    private void scheduleRespawn(PlayerId playerId, long delayTicks) {
+    private void scheduleRespawnWithCountdown(PlayerId playerId, int totalSeconds) {
         new BukkitRunnable() {
+            int remaining = totalSeconds;
+
             @Override
             public void run() {
-                respawnPlayerUseCase.completeRespawn(playerId);
+                if (remaining > 0) {
+                    respawnPlayerUseCase.showCountdown(playerId, remaining);
+                    remaining--;
+                } else {
+                    respawnPlayerUseCase.completeRespawn(playerId);
+                    cancel();
+                }
             }
-        }.runTaskLater(plugin, delayTicks);
+        }.runTaskTimer(plugin, 0L, 20L); // 20ticks = 1秒間隔
     }
 }

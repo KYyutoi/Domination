@@ -8,20 +8,16 @@ import io.github.LRGyutoi.domination.infrastructure.adapter.*;
 import io.github.LRGyutoi.domination.infrastructure.repository.*;
 import io.github.LRGyutoi.domination.presentation.command.*;
 import io.github.LRGyutoi.domination.presentation.listener.*;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.logging.Logger;
 
 /**
  * Dominationプラグイン メインクラス
- * 
+ *
  * クリーンアーキテクチャに基づく拠点制圧型TPSゲームプラグイン
- * 
- * アーキテクチャ概要:
- * - Domain層: ビジネスロジック（Minecraft依存なし）
- * - Application層: ユースケース、ポート定義
- * - Infrastructure層: Bukkit実装、永続化
- * - Presentation層: コマンド、イベントリスナー
+ * このクラスはComposition Rootとして依存関係の構築のみを担当する
  */
 public class DominationPlugin extends JavaPlugin {
 
@@ -32,18 +28,18 @@ public class DominationPlugin extends JavaPlugin {
     private HeadshotDetectionService headshotDetectionService;
     private CaptureProgressService captureProgressService;
 
-    // Repositories
+    // Repositories（インターフェース型で保持）
     private PlayerRepository playerRepository;
     private TeamRepository teamRepository;
     private WeaponRepository weaponRepository;
     private CapturePointRepository capturePointRepository;
 
-    // Adapters
-    private BukkitWorldAdapter worldAdapter;
-    private BukkitMessageAdapter messageAdapter;
-    private BukkitEffectAdapter effectAdapter;
-    private BukkitPlayerAdapter playerAdapter;
-    private BukkitProjectileAdapter projectileAdapter;
+    // Adapters（インターフェース型で保持 = DIPに準拠）
+    private WorldAdapter worldAdapter;
+    private MessageAdapter messageAdapter;
+    private EffectAdapter effectAdapter;
+    private PlayerAdapter playerAdapter;
+    private ProjectileAdapter projectileAdapter;
 
     // Use Cases
     private FireWeaponUseCase fireWeaponUseCase;
@@ -85,12 +81,21 @@ public class DominationPlugin extends JavaPlugin {
     }
 
     /**
-     * ドメインサービスを初期化
+     * ドメインサービスを初期化（config.ymlの値を使用）
      */
     private void initializeDomainServices() {
         logger.info("ドメインサービスを初期化中...");
 
-        damageCalculationService = DamageCalculationService.withDefaults();
+        FileConfiguration config = getConfig();
+
+        damageCalculationService = new DamageCalculationService(
+            config.getDouble("damage.headshot-multiplier", 2.0),
+            config.getBoolean("damage.distance-falloff.enabled", false),
+            config.getDouble("damage.distance-falloff.start-distance", 30.0),
+            config.getDouble("damage.distance-falloff.end-distance", 100.0),
+            config.getDouble("damage.distance-falloff.min-damage-percent", 0.5)
+        );
+
         headshotDetectionService = new HeadshotDetectionService();
         captureProgressService = new CaptureProgressService();
     }

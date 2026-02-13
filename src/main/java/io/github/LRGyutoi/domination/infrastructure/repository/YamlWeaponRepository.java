@@ -44,7 +44,7 @@ public class YamlWeaponRepository implements WeaponRepository {
     @Override
     public Optional<Weapon> findByName(String name) {
         return weapons.values().stream()
-            .filter(w -> w.getName().equalsIgnoreCase(name))
+            .filter(w -> w.getDisplayName().equalsIgnoreCase(name))
             .findFirst();
     }
 

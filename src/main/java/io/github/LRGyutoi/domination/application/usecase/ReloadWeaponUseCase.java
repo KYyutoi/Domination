@@ -32,10 +32,11 @@ public class ReloadWeaponUseCase {
     }
 
     /**
-     * リロードを実行
+     * リロード開始を実行
+     *
+     * @return リロード結果（成功時はreloadTimeMsにリロード所要時間を含む）
      */
-    public ReloadResult execute(PlayerId playerId, WeaponId weaponId) {
-        // プレイヤー取得
+    public ReloadResult startReload(PlayerId playerId, WeaponId weaponId) {
         GamePlayer player = playerRepository.findById(playerId).orElse(null);
         if (player == null) {
             return ReloadResult.failure("プレイヤーが見つかりません");
@@ -45,23 +46,58 @@ public class ReloadWeaponUseCase {
             return ReloadResult.failure("ゲームに参加していません");
         }
 
-        // 武器取得
+        if (!player.isAlive()) {
+            return ReloadResult.failure("死亡中はリロードできません");
+        }
+
+        if (player.isReloading()) {
+            return ReloadResult.failure("すでにリロード中です");
+        }
+
         Weapon weapon = weaponRepository.findById(weaponId).orElse(null);
         if (weapon == null) {
             return ReloadResult.failure("武器が見つかりません");
         }
 
-        // リロード処理
-        // TODO: プレイヤーごとの弾薬管理を実装
-        int reloadTime = (int) weapon.getStats().reloadTimeMs();
+        // すでに満タンならリロード不要
+        int currentAmmo = player.getAmmo(weaponId);
+        if (currentAmmo >= weapon.getStats().magazineSize()) {
+            return ReloadResult.failure("弾薬は満タンです");
+        }
 
-        // エフェクト再生
+        // リロード状態を開始
+        player.startReloading();
+        playerRepository.save(player);
+
         effectAdapter.playReloadSound(playerId);
-
-        // アクションバーに表示
         messageAdapter.sendActionBar(playerId, "§eリロード中...");
 
-        return ReloadResult.success(reloadTime);
+        int reloadTimeMs = (int) weapon.getStats().reloadTimeMs();
+        return ReloadResult.success(reloadTimeMs);
+    }
+
+    /**
+     * リロード完了処理
+     * タイマー経過後にPresentation層から呼び出される
+     */
+    public void completeReload(PlayerId playerId, WeaponId weaponId) {
+        GamePlayer player = playerRepository.findById(playerId).orElse(null);
+        if (player == null || !player.isReloading()) {
+            return;
+        }
+
+        Weapon weapon = weaponRepository.findById(weaponId).orElse(null);
+        if (weapon == null) {
+            player.cancelReloading();
+            playerRepository.save(player);
+            return;
+        }
+
+        player.finishReloading(weapon.getStats().magazineSize());
+        playerRepository.save(player);
+
+        messageAdapter.sendActionBar(playerId,
+            "§aリロード完了 §7| §f" + weapon.getStats().magazineSize() + "§7/" + weapon.getStats().magazineSize());
     }
 
     /**

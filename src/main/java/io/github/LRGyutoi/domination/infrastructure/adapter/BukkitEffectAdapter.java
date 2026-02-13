@@ -13,8 +13,10 @@ import java.util.UUID;
 public class BukkitEffectAdapter implements EffectAdapter {
 
     @Override
-    public void playHitEffect(double x, double y, double z, boolean isHeadshot) {
-        Location loc = new Location(Bukkit.getWorlds().get(0), x, y, z);
+    public void playHitEffect(String worldName, double x, double y, double z, boolean isHeadshot) {
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) return;
+        Location loc = new Location(world, x, y, z);
 
         if (isHeadshot) {
             // ヘッドショットエフェクト（赤いパーティクル）

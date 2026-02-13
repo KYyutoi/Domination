@@ -44,37 +44,55 @@ public class FireWeaponUseCase {
      * @return 発射結果
      */
     public FireResult execute(PlayerId playerId, WeaponId weaponId) {
-        // プレイヤー取得
-        GamePlayer player = playerRepository.findById(playerId)
-            .orElse(null);
-
+        GamePlayer player = playerRepository.findById(playerId).orElse(null);
         if (player == null) {
             return FireResult.failure("プレイヤーが見つかりません");
         }
 
-        // ゲーム中でなければ発射不可
         if (!player.isInGame()) {
             return FireResult.failure("ゲームに参加していません");
         }
 
-        // 武器取得
-        Weapon weapon = weaponRepository.findById(weaponId)
-            .orElse(null);
-
+        Weapon weapon = weaponRepository.findById(weaponId).orElse(null);
         if (weapon == null) {
             return FireResult.failure("武器が見つかりません");
         }
 
-        // 残弾チェック（プレイヤーの弾薬管理はここで行う予定）
-        // TODO: 弾薬管理をGamePlayerに追加
+        // 発射可能かチェック（リロード中・死亡中・クールダウンを含む）
+        if (!player.canFire(weapon.getFireIntervalMillis())) {
+            if (player.isReloading()) {
+                return FireResult.failure("リロード中");
+            }
+            return FireResult.failure("発射できません");
+        }
 
-        // 弾丸を生成
-        projectileAdapter.spawnProjectile(playerId, weaponId, weapon.getStats());
+        // 残弾チェック
+        if (!player.hasAmmo(weaponId)) {
+            effectAdapter.playEmptySound(playerId);
+            messageAdapter.sendActionBar(playerId, "§c弾切れ - リロードしてください");
+            return FireResult.failure("弾切れ");
+        }
 
-        // エフェクト再生
+        // 弾薬を消費し、発射時刻を記録
+        player.consumeAmmo();
+        player.recordShot();
+
+        // 散弾銃の場合は複数弾生成
+        int pellets = weapon.getStats().pelletsPerShot();
+        for (int i = 0; i < pellets; i++) {
+            projectileAdapter.spawnProjectile(playerId, weaponId, weapon.getStats());
+        }
+
         effectAdapter.playMuzzleFlash(playerId);
 
-        return FireResult.success();
+        // 残弾表示
+        int remainingAmmo = player.getAmmo(weaponId);
+        messageAdapter.sendActionBar(playerId,
+            "§f" + weapon.getDisplayName() + " §7| §f" + remainingAmmo + "§7/" + weapon.getStats().magazineSize());
+
+        playerRepository.save(player);
+
+        return FireResult.success(remainingAmmo);
     }
 
     /**
@@ -82,14 +100,15 @@ public class FireWeaponUseCase {
      */
     public record FireResult(
         boolean isSuccess,
-        String errorMessage
+        String errorMessage,
+        int remainingAmmo
     ) {
-        public static FireResult success() {
-            return new FireResult(true, null);
+        public static FireResult success(int remainingAmmo) {
+            return new FireResult(true, null, remainingAmmo);
         }
 
         public static FireResult failure(String message) {
-            return new FireResult(false, message);
+            return new FireResult(false, message, -1);
         }
     }
 }

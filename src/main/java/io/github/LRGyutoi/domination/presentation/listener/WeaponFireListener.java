@@ -2,9 +2,11 @@ package io.github.LRGyutoi.domination.presentation.listener;
 
 import io.github.LRGyutoi.domination.application.usecase.FireWeaponUseCase;
 import io.github.LRGyutoi.domination.domain.model.player.PlayerId;
+import io.github.LRGyutoi.domination.domain.model.weapon.Weapon;
 import io.github.LRGyutoi.domination.domain.model.weapon.WeaponId;
 import io.github.LRGyutoi.domination.domain.repository.WeaponRepository;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,24 +17,17 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.Plugin;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * 武器発射イベントリスナー
+ * クリックイベントを検知し、FireWeaponUseCaseに委譲する
  */
 public class WeaponFireListener implements Listener {
 
     private final FireWeaponUseCase fireWeaponUseCase;
     private final WeaponRepository weaponRepository;
     private final NamespacedKey weaponIdKey;
-
-    // 発射クールダウン管理
-    private final Map<UUID, Long> lastFireTime = new HashMap<>();
 
     public WeaponFireListener(
             FireWeaponUseCase fireWeaponUseCase,
@@ -46,7 +41,6 @@ public class WeaponFireListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        // 右クリックのみ
         if (event.getAction() != Action.RIGHT_CLICK_AIR
                 && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
@@ -55,34 +49,23 @@ public class WeaponFireListener implements Listener {
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
 
-        // 武器かどうかチェック
-        String weaponId = getWeaponId(item);
-        if (weaponId == null) {
+        String weaponIdStr = getWeaponId(item);
+        if (weaponIdStr == null) {
             return;
         }
 
-        // クールダウンチェック
-        if (isOnCooldown(player.getUniqueId(), 100)) { // 100ms (仮の値)
-            return;
-        }
-
-        // イベントをキャンセル（通常のアイテム使用を防ぐ）
+        // 通常のアイテム使用を防ぐ
         event.setCancelled(true);
 
-        // 発射処理
-        FireWeaponUseCase.FireResult result = fireWeaponUseCase.execute(
+        // 発射処理はUseCase側でcanFire()による武器固有のクールダウンを判定
+        fireWeaponUseCase.execute(
             PlayerId.of(player.getUniqueId().toString()),
-            WeaponId.of(weaponId)
+            WeaponId.of(weaponIdStr)
         );
-
-        // クールダウンを記録
-        if (result.isSuccess()) {
-            lastFireTime.put(player.getUniqueId(), System.currentTimeMillis());
-        }
     }
 
     /**
-     * アイテムから武器IDを取得
+     * アイテムのPersistentDataから武器IDを取得
      */
     private String getWeaponId(ItemStack item) {
         if (item == null || item.getType() == Material.AIR) {
@@ -96,17 +79,5 @@ public class WeaponFireListener implements Listener {
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
         return container.get(weaponIdKey, PersistentDataType.STRING);
-    }
-
-    /**
-     * クールダウン中かどうか
-     */
-    private boolean isOnCooldown(UUID playerId, int cooldownMs) {
-        Long lastFire = lastFireTime.get(playerId);
-        if (lastFire == null) {
-            return false;
-        }
-
-        return System.currentTimeMillis() - lastFire < cooldownMs;
     }
 }

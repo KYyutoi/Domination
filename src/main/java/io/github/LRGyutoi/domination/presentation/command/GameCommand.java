@@ -114,7 +114,7 @@ public class GameCommand implements CommandExecutor, TabCompleter {
             } else {
                 ownerColor = "§7";
             }
-            sender.sendMessage("  " + ownerColor + point.getName() +
+            sender.sendMessage("  " + ownerColor + point.getDisplayName() +
                 " §7(" + String.format("%.0f%%", point.getCaptureProgress() * 100) + ")");
         }
 
@@ -216,7 +216,7 @@ public class GameCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 2 && args[0].equalsIgnoreCase("removepoint")) {
             return capturePointRepository.findAll().stream()
-                .map(CapturePoint::getName)
+                .map(CapturePoint::getDisplayName)
                 .filter(s -> s.startsWith(args[1]))
                 .collect(Collectors.toList());
         }

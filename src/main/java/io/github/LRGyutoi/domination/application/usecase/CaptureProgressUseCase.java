@@ -112,7 +112,7 @@ public class CaptureProgressUseCase {
      */
     private void notifyCaptured(CapturePoint point, TeamId newOwner) {
         String teamName = newOwner == TeamId.RED ? "§c赤チーム" : "§9青チーム";
-        messageAdapter.broadcast(teamName + "§fが§e" + point.getName() + "§fを占領しました！");
+        messageAdapter.broadcast(teamName + "§fが§e" + point.getDisplayName() + "§fを占領しました！");
     }
 
     /**
@@ -120,7 +120,7 @@ public class CaptureProgressUseCase {
      */
     private void notifyContested(CapturePoint point, List<PlayerId> players) {
         for (PlayerId playerId : players) {
-            messageAdapter.sendActionBar(playerId, "§e" + point.getName() + " - 拮抗中！");
+            messageAdapter.sendActionBar(playerId, "§e" + point.getDisplayName() + " - 拮抗中！");
         }
     }
 

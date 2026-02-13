@@ -23,10 +23,6 @@ public class Weapon {
         return displayName;
     }
 
-    public String getName() {
-        return displayName;
-    }
-
     public WeaponStats getStats() {
         return stats;
     }

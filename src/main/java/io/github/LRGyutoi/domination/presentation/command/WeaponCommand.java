@@ -83,7 +83,7 @@ public class WeaponCommand implements CommandExecutor, TabCompleter {
         ItemStack weaponItem = createWeaponItem(weapon);
         player.getInventory().addItem(weaponItem);
 
-        player.sendMessage("§a武器を取得しました: " + weapon.getName());
+        player.sendMessage("§a武器を取得しました: " + weapon.getDisplayName());
 
         return true;
     }
@@ -92,7 +92,7 @@ public class WeaponCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§7=== 利用可能な武器 ===");
 
         for (Weapon weapon : weaponRepository.findAll()) {
-            sender.sendMessage("§e" + weapon.getId().getValue() + " §7- " + weapon.getName());
+            sender.sendMessage("§e" + weapon.getId().getValue() + " §7- " + weapon.getDisplayName());
         }
 
         return true;
@@ -115,7 +115,7 @@ public class WeaponCommand implements CommandExecutor, TabCompleter {
         ItemMeta meta = item.getItemMeta();
 
         // 名前を設定
-        meta.displayName(Component.text(weapon.getName()).color(NamedTextColor.GOLD));
+        meta.displayName(Component.text(weapon.getDisplayName()).color(NamedTextColor.GOLD));
 
         // Loreを設定
         List<Component> lore = new ArrayList<>();

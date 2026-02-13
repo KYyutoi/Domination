@@ -34,12 +34,20 @@ public class RespawnPlayerUseCase {
 
     /**
      * リスポーン処理を開始
+     *
+     * @return リスポーン遅延秒数（Presentation層でタイマーをスケジュールするために使用）
      */
-    public void startRespawn(PlayerId playerId) {
+    public int startRespawn(PlayerId playerId) {
         GamePlayer player = playerRepository.findById(playerId).orElse(null);
         if (player == null || !player.isInGame()) {
-            return;
+            return 0;
         }
+
+        // ドメインモデルに死亡状態を反映
+        if (player.isAlive()) {
+            player.die();
+        }
+        playerRepository.save(player);
 
         // 動きを制限
         playerAdapter.freeze(playerId);
@@ -50,27 +58,22 @@ public class RespawnPlayerUseCase {
             team.decrementTickets();
             teamRepository.save(team);
 
-            // チケット残数を通知
-            messageAdapter.sendActionBar(playerId, 
+            messageAdapter.sendActionBar(playerId,
                 "§c残りチケット: §f" + team.getTickets());
         }
 
-        // リスポーンカウントダウンを表示
-        showRespawnCountdown(playerId, DEFAULT_RESPAWN_DELAY_SECONDS);
+        return DEFAULT_RESPAWN_DELAY_SECONDS;
     }
 
     /**
-     * リスポーンカウントダウンを表示
+     * カウントダウンの1秒ごとの表示を送信
+     * Presentation層のタイマーから毎秒呼び出される
      */
-    private void showRespawnCountdown(PlayerId playerId, int seconds) {
-        for (int i = seconds; i > 0; i--) {
-            final int remaining = i;
-            // NOTE: 実際のタイマー処理はインフラ層で実装
-            messageAdapter.sendTitle(playerId, 
-                "§c" + remaining, 
-                "§7リスポーンまで", 
-                0, 20, 0);
-        }
+    public void showCountdown(PlayerId playerId, int remainingSeconds) {
+        messageAdapter.sendTitle(playerId,
+            "§c" + remainingSeconds,
+            "§7リスポーンまで",
+            0, 25, 0);
     }
 
     /**
@@ -82,6 +85,10 @@ public class RespawnPlayerUseCase {
             return;
         }
 
+        // ドメインモデルの生存状態を復帰
+        player.respawn();
+        playerRepository.save(player);
+
         // スポーン地点にテレポート
         playerAdapter.teleportToSpawn(playerId, player.getTeamId().name());
 
@@ -91,10 +98,9 @@ public class RespawnPlayerUseCase {
         // 動き制限解除
         playerAdapter.unfreeze(playerId);
 
-        // 通知
-        messageAdapter.sendTitle(playerId, 
-            "§aリスポーン完了", 
-            "", 
+        messageAdapter.sendTitle(playerId,
+            "§aリスポーン完了",
+            "",
             5, 20, 5);
     }
 }

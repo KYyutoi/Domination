@@ -3,7 +3,7 @@ package io.github.LRGyutoi.domination.infrastructure.adapter;
 import io.github.LRGyutoi.domination.application.port.out.MessageAdapter;
 import io.github.LRGyutoi.domination.domain.model.player.PlayerId;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -46,14 +46,14 @@ public class BukkitMessageAdapter implements MessageAdapter {
 
     @Override
     public void broadcast(String message) {
-        Bukkit.broadcast(Component.text(PREFIX + message));
+        Bukkit.broadcast(deserializeColorCodes(PREFIX + message));
     }
 
     @Override
     public void sendActionBar(PlayerId playerId, String message) {
         Player player = getPlayer(playerId);
         if (player != null) {
-            player.sendActionBar(Component.text(message));
+            player.sendActionBar(deserializeColorCodes(message));
         }
     }
 
@@ -98,9 +98,11 @@ public class BukkitMessageAdapter implements MessageAdapter {
         return Bukkit.getPlayer(uuid);
     }
 
+    /**
+     * §カラーコードをAdventure Componentに変換
+     * LegacyComponentSerializerを使用してセクション記号(§)ベースのカラーコードを正しくパース
+     */
     private Component deserializeColorCodes(String text) {
-        // 簡易的なカラーコード変換
-        // Adventure APIを使用したより適切な実装に置き換え可能
-        return Component.text(text.replace("§", "§"));
+        return LegacyComponentSerializer.legacySection().deserialize(text);
     }
 }

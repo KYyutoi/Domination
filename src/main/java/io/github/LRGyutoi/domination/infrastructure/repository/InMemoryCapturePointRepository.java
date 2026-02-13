@@ -17,7 +17,7 @@ public class InMemoryCapturePointRepository implements CapturePointRepository {
 
     @Override
     public void save(CapturePoint point) {
-        capturePoints.put(point.getName(), point);
+        capturePoints.put(point.getDisplayName(), point);
     }
 
     @Override
